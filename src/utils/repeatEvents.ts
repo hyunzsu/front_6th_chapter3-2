@@ -1,6 +1,6 @@
 import { Event, RepeatInfo } from '../types';
 
-function generateDailyRepeatEvents(event: Event, repeatConfig: RepeatInfo): Event[] {
+export function generateDailyRepeatEvents(event: Event, repeatConfig: RepeatInfo): Event[] {
   const startDate = new Date(event.date);
   const endDate = new Date(repeatConfig.endDate!);
   const events: Event[] = [];
@@ -8,6 +8,7 @@ function generateDailyRepeatEvents(event: Event, repeatConfig: RepeatInfo): Even
   while (startDate <= endDate) {
     events.push({
       ...event,
+      id: `${event.id}-${startDate.toISOString().split('T')[0]}`,
       date: startDate.toISOString().split('T')[0],
     });
     startDate.setDate(startDate.getDate() + repeatConfig.interval);
@@ -16,47 +17,109 @@ function generateDailyRepeatEvents(event: Event, repeatConfig: RepeatInfo): Even
   return events;
 }
 
-function generateWeeklyRepeatEvents(event: Event, repeatConfig: RepeatInfo): Event[] {
+export function generateWeeklyRepeatEvents(event: Event, repeatConfig: RepeatInfo): Event[] {
   const startDate = new Date(event.date);
   const endDate = new Date(repeatConfig.endDate!);
   const events: Event[] = [];
 
   while (startDate <= endDate) {
-    events.push({ ...event, date: startDate.toISOString().split('T')[0] });
+    events.push({
+      ...event,
+      id: `${event.id}-${startDate.toISOString().split('T')[0]}`,
+      date: startDate.toISOString().split('T')[0],
+    });
     startDate.setDate(startDate.getDate() + 7 * repeatConfig.interval);
   }
 
   return events;
 }
 
-function generateMonthlyRepeatEvents(event: Event, repeatConfig: RepeatInfo): Event[] {
-  const startDate = new Date(event.date);
+export function generateMonthlyRepeatEvents(event: Event, repeatConfig: RepeatInfo): Event[] {
+  const originalDate = new Date(event.date);
   const endDate = new Date(repeatConfig.endDate!);
   const events: Event[] = [];
 
-  while (startDate <= endDate) {
-    events.push({ ...event, date: startDate.toISOString().split('T')[0] });
-    startDate.setMonth(startDate.getMonth() + repeatConfig.interval);
+  const originalDay = originalDate.getDate();
+  let currentYear = originalDate.getFullYear();
+  let currentMonth = originalDate.getMonth();
+
+  // 종료 조건
+  const maxYearsToCheck = endDate.getFullYear() - originalDate.getFullYear();
+
+  while (currentYear <= originalDate.getFullYear() + maxYearsToCheck) {
+    // 현재 월의 마지막 날 확인
+    const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+    // 원본 일자가 현재 월에 존재하는 경우만 이벤트 생성
+    if (originalDay <= daysInCurrentMonth) {
+      const currentDate = new Date(currentYear, currentMonth, originalDay);
+
+      // 종료일을 넘으면 루프 종료
+      if (currentDate > endDate) break;
+
+      events.push({
+        ...event,
+        id: `${event.id}-${currentDate.toISOString().split('T')[0]}`,
+        date: currentDate.toISOString().split('T')[0],
+      });
+    }
+
+    // 다음 반복 월로 이동
+    currentMonth += repeatConfig.interval;
+
+    // 연도 경계 처리
+    while (currentMonth >= 12) {
+      currentYear++;
+      currentMonth -= 12;
+    }
+
+    // 현재 월이 종료일보다 훨씬 뒤면 종료
+    if (currentYear > endDate.getFullYear() + 1) break;
   }
 
   return events;
 }
 
-function generateYearlyRepeatEvents(event: Event, repeatConfig: RepeatInfo): Event[] {
-  const startDate = new Date(event.date);
+export function generateYearlyRepeatEvents(event: Event, repeatConfig: RepeatInfo): Event[] {
+  const originalDate = new Date(event.date);
   const endDate = new Date(repeatConfig.endDate!);
   const events: Event[] = [];
 
-  while (startDate <= endDate) {
-    events.push({ ...event, date: startDate.toISOString().split('T')[0] });
-    startDate.setFullYear(startDate.getFullYear() + repeatConfig.interval);
+  const originalMonth = originalDate.getMonth();
+  const originalDay = originalDate.getDate();
+  let currentYear = originalDate.getFullYear();
+
+  // 종료 조건
+  while (currentYear <= endDate.getFullYear()) {
+    // 현재 연도에 원본 날짜가 유효한지 확인 (윤년 처리)
+    const currentDate = new Date(currentYear, originalMonth, originalDay);
+
+    // 날짜가 유효한지 확인 (2월 29일이 평년에 설정되면 3월 1일이 됨)
+    const isValidDate =
+      currentDate.getMonth() === originalMonth && currentDate.getDate() === originalDay;
+
+    if (isValidDate) {
+      // 종료일을 넘으면 루프 종료
+      if (currentDate > endDate) break;
+
+      events.push({
+        ...event,
+        id: `${event.id}-${currentDate.toISOString().split('T')[0]}`,
+        date: currentDate.toISOString().split('T')[0],
+      });
+    }
+
+    // 다음 반복 연도로 이동
+    currentYear += repeatConfig.interval;
   }
 
   return events;
 }
 
-export function generateRepeatEvents(event: Event, repeatConfig: RepeatInfo) {
-  if (!repeatConfig.endDate) return undefined;
+export function generateRepeatEvents(event: Event, repeatConfig: RepeatInfo): Event[] | undefined {
+  if (!repeatConfig.endDate) {
+    return undefined;
+  }
 
   const { type } = repeatConfig;
 
@@ -69,5 +132,9 @@ export function generateRepeatEvents(event: Event, repeatConfig: RepeatInfo) {
       return generateMonthlyRepeatEvents(event, repeatConfig);
     case 'yearly':
       return generateYearlyRepeatEvents(event, repeatConfig);
+    case 'none':
+      return [event];
+    default:
+      return undefined;
   }
 }
