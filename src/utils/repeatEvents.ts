@@ -1,14 +1,14 @@
-import { Event, RepeatInfo } from '../types';
+import { EventForm, RepeatInfo } from '../types';
 
-export function generateDailyRepeatEvents(event: Event, repeatConfig: RepeatInfo): Event[] {
+export function generateDailyRepeatEvents(event: EventForm, repeatConfig: RepeatInfo): EventForm[] {
   const startDate = new Date(event.date);
   const endDate = new Date(repeatConfig.endDate!);
-  const events: Event[] = [];
+  const events: EventForm[] = [];
 
   while (startDate <= endDate) {
     events.push({
       ...event,
-      id: `${event.id}-${startDate.toISOString().split('T')[0]}`,
+      // id: `${event.id}-${startDate.toISOString().split('T')[0]}`,
       date: startDate.toISOString().split('T')[0],
     });
     startDate.setDate(startDate.getDate() + repeatConfig.interval);
@@ -17,15 +17,17 @@ export function generateDailyRepeatEvents(event: Event, repeatConfig: RepeatInfo
   return events;
 }
 
-export function generateWeeklyRepeatEvents(event: Event, repeatConfig: RepeatInfo): Event[] {
+export function generateWeeklyRepeatEvents(
+  event: EventForm,
+  repeatConfig: RepeatInfo
+): EventForm[] {
   const startDate = new Date(event.date);
   const endDate = new Date(repeatConfig.endDate!);
-  const events: Event[] = [];
+  const events: EventForm[] = [];
 
   while (startDate <= endDate) {
     events.push({
       ...event,
-      id: `${event.id}-${startDate.toISOString().split('T')[0]}`,
       date: startDate.toISOString().split('T')[0],
     });
     startDate.setDate(startDate.getDate() + 7 * repeatConfig.interval);
@@ -34,10 +36,13 @@ export function generateWeeklyRepeatEvents(event: Event, repeatConfig: RepeatInf
   return events;
 }
 
-export function generateMonthlyRepeatEvents(event: Event, repeatConfig: RepeatInfo): Event[] {
+export function generateMonthlyRepeatEvents(
+  event: EventForm,
+  repeatConfig: RepeatInfo
+): EventForm[] {
   const originalDate = new Date(event.date);
   const endDate = new Date(repeatConfig.endDate!);
-  const events: Event[] = [];
+  const events: EventForm[] = [];
 
   const originalDay = originalDate.getDate();
   let currentYear = originalDate.getFullYear();
@@ -59,7 +64,6 @@ export function generateMonthlyRepeatEvents(event: Event, repeatConfig: RepeatIn
 
       events.push({
         ...event,
-        id: `${event.id}-${currentDate.toISOString().split('T')[0]}`,
         date: currentDate.toISOString().split('T')[0],
       });
     }
@@ -80,10 +84,13 @@ export function generateMonthlyRepeatEvents(event: Event, repeatConfig: RepeatIn
   return events;
 }
 
-export function generateYearlyRepeatEvents(event: Event, repeatConfig: RepeatInfo): Event[] {
+export function generateYearlyRepeatEvents(
+  event: EventForm,
+  repeatConfig: RepeatInfo
+): EventForm[] {
   const originalDate = new Date(event.date);
   const endDate = new Date(repeatConfig.endDate!);
-  const events: Event[] = [];
+  const events: EventForm[] = [];
 
   const originalMonth = originalDate.getMonth();
   const originalDay = originalDate.getDate();
@@ -104,7 +111,6 @@ export function generateYearlyRepeatEvents(event: Event, repeatConfig: RepeatInf
 
       events.push({
         ...event,
-        id: `${event.id}-${currentDate.toISOString().split('T')[0]}`,
         date: currentDate.toISOString().split('T')[0],
       });
     }
@@ -116,7 +122,10 @@ export function generateYearlyRepeatEvents(event: Event, repeatConfig: RepeatInf
   return events;
 }
 
-export function generateRepeatEvents(event: Event, repeatConfig: RepeatInfo): Event[] | undefined {
+export function generateRepeatEvents(
+  event: EventForm,
+  repeatConfig: RepeatInfo
+): EventForm[] | undefined {
   if (!repeatConfig.endDate) {
     return undefined;
   }
