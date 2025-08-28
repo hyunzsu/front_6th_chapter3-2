@@ -49,10 +49,15 @@ export const useEventOperations = (editing: boolean, onSave?: () => void) => {
         // 기존 단일 일정 생성/수정 로직
         let response;
         if (editing) {
+          const modifiedEventData = {
+            ...eventData,
+            repeat: { type: 'none' as const, interval: 0 },
+          };
+
           response = await fetch(`/api/events/${(eventData as Event).id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(eventData),
+            body: JSON.stringify(modifiedEventData),
           });
         } else {
           response = await fetch('/api/events', {
