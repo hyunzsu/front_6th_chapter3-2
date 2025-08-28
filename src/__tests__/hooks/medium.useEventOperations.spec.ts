@@ -4,8 +4,10 @@ import { http, HttpResponse } from 'msw';
 import {
   setupMockHandlerCreation,
   setupMockHandlerDeletion,
-  setupMockHandlerRepeatCreation,
   setupMockHandlerUpdating,
+  setupMockHandlerRepeatCreation,
+  setupMockHandlerRepeatDeletion,
+  setupMockHandlerRepeatUpdating,
 } from '../../__mocks__/handlersUtils.ts';
 import { useEventOperations } from '../../hooks/useEventOperations.ts';
 import { server } from '../../setupTests.ts';
@@ -361,5 +363,113 @@ describe('반복 일정 저장', () => {
     expect(enqueueSnackbarFn).toHaveBeenCalledWith('일정 저장 실패', {
       variant: 'error',
     });
+  });
+});
+
+describe('반복 일정 수정', () => {
+  it('반복 일정 수정 시 단일 일정으로 변경된다', async () => {
+    setupMockHandlerRepeatCreation();
+    const { result } = renderHook(() => useEventOperations(false));
+
+    // 반복 일정 생성
+    await act(async () => {
+      await result.current.saveEvent({
+        title: '반복 회의',
+        date: '2025-01-01',
+        startTime: '10:00',
+        endTime: '11:00',
+        description: '매일 반복',
+        location: '회의실',
+        category: '업무',
+        notificationTime: 10,
+        repeat: { type: 'daily', interval: 1, endDate: '2025-01-02' },
+      });
+    });
+
+    const createdEvents = result.current.events;
+    const repeatEvent = createdEvents[0];
+
+    setupMockHandlerRepeatUpdating(createdEvents);
+    const { result: editResult } = renderHook(() => useEventOperations(true));
+
+    await act(() => Promise.resolve(null));
+
+    await act(async () => {
+      await editResult.current.saveEvent({ ...repeatEvent, title: '수정된 회의' });
+    });
+
+    expect(editResult.current.events[0].repeat.type).toBe('none');
+    expect(editResult.current.events[0].title).toBe('수정된 회의');
+  });
+
+  it('반복 일정 수정 실패 시 적절한 에러 메시지를 표시한다', async () => {
+    setupMockHandlerRepeatCreation();
+    const { result } = renderHook(() => useEventOperations(false));
+
+    // 반복 일정 생성
+    await act(async () => {
+      await result.current.saveEvent({
+        title: '반복 회의',
+        date: '2025-01-01',
+        startTime: '10:00',
+        endTime: '11:00',
+        description: '매일 반복',
+        location: '회의실',
+        category: '업무',
+        notificationTime: 10,
+        repeat: { type: 'daily', interval: 1, endDate: '2025-01-02' },
+      });
+    });
+
+    const repeatEvent = result.current.events[0];
+
+    const { result: editResult } = renderHook(() => useEventOperations(true));
+
+    server.use(
+      http.put('/api/events/:id', () => {
+        return new HttpResponse(null, { status: 500 });
+      })
+    );
+
+    await act(async () => {
+      await editResult.current.saveEvent({ ...repeatEvent, title: '수정된 회의' });
+    });
+
+    expect(enqueueSnackbarFn).toHaveBeenCalledWith('일정 저장 실패', {
+      variant: 'error',
+    });
+  });
+});
+
+describe('반복 일정 삭제', () => {
+  it('반복 일정 삭제 시 해당 일정만 삭제된다', async () => {
+    setupMockHandlerRepeatCreation();
+    const { result } = renderHook(() => useEventOperations(false));
+
+    await act(async () => {
+      await result.current.saveEvent({
+        title: '반복 회의',
+        date: '2025-01-01',
+        startTime: '10:00',
+        endTime: '11:00',
+        description: '매일 반복',
+        location: '회의실',
+        category: '업무',
+        notificationTime: 10,
+        repeat: { type: 'daily', interval: 1, endDate: '2025-01-02' },
+      });
+    });
+
+    const initialCount = result.current.events.length;
+    const eventToDelete = result.current.events[0];
+
+    setupMockHandlerRepeatDeletion(result.current.events);
+
+    await act(async () => {
+      await result.current.deleteEvent(eventToDelete.id);
+    });
+
+    expect(result.current.events.length).toBe(initialCount - 1);
+    expect(result.current.events.find((e) => e.id === eventToDelete.id)).toBeUndefined();
   });
 });
