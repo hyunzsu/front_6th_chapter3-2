@@ -16,7 +16,7 @@ export const useEventForm = (initialEvent?: Event) => {
   const [isRepeating, setIsRepeating] = useState(initialEvent?.repeat.type !== 'none');
   const [repeatType, setRepeatType] = useState<RepeatType>(initialEvent?.repeat.type || 'none');
   const [repeatInterval, setRepeatInterval] = useState(initialEvent?.repeat.interval || 1);
-  const [repeatEndDate, setRepeatEndDate] = useState(initialEvent?.repeat.endDate || '');
+  const [repeatEndDate, setRepeatEndDate] = useState(initialEvent?.repeat.endDate || '2025-10-30');
   const [notificationTime, setNotificationTime] = useState(initialEvent?.notificationTime || 10);
 
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -49,7 +49,7 @@ export const useEventForm = (initialEvent?: Event) => {
     setIsRepeating(false);
     setRepeatType('none');
     setRepeatInterval(1);
-    setRepeatEndDate('');
+    setRepeatEndDate('2025-10-30');
     setNotificationTime(10);
   };
 
