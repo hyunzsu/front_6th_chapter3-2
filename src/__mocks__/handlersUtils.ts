@@ -122,62 +122,21 @@ export const setupMockHandlerRepeatCreation = (initEvents = [] as Event[]) => {
   );
 };
 
-export const setupMockHandlerRepeatUpdating = () => {
-  const mockEvents: Event[] = [
-    {
-      id: '1',
-      title: '매일 스탠드업',
-      date: '2025-10-16',
-      startTime: '10:30',
-      endTime: '11:00',
-      description: '매일 스탠드업 미팅',
-      location: '온라인',
-      category: '업무',
-      repeat: {
-        type: 'daily',
-        interval: 1,
-        endDate: '2025-11-30',
-      },
-      notificationTime: 1,
-    },
-    {
-      id: '2',
-      title: '매주 팀 회의',
-      date: '2025-10-22',
-      startTime: '09:00',
-      endTime: '10:00',
-      description: '주간 팀 미팅',
-      location: '회의실 A',
-      category: '업무',
-      repeat: {
-        type: 'weekly',
-        interval: 1,
-        endDate: '2025-12-31',
-      },
-      notificationTime: 10,
-    },
-  ];
+export const setupMockHandlerRepeatUpdating = (initEvents = [] as Event[]) => {
+  const mockEvents: Event[] = [...initEvents];
 
   server.use(
     http.get('/api/events', () => {
       return HttpResponse.json({ events: mockEvents });
     }),
-    http.put('/api/events-list', async ({ request }) => {
-      const { events: requestEvents } = (await request.json()) as { events: Event[] };
-      let isUpdated = false;
+    http.put('/api/events/:id', async ({ params, request }) => {
+      const { id } = params;
+      const updatedEvent = (await request.json()) as Event;
+      const index = mockEvents.findIndex((event) => event.id === id);
 
-      const newEvents = [...mockEvents];
-      requestEvents.forEach((event) => {
-        const index = mockEvents.findIndex((target) => target.id === event.id);
-        if (index !== -1) {
-          isUpdated = true;
-          newEvents[index] = { ...mockEvents[index], ...event };
-        }
-      });
-
-      if (isUpdated) {
-        mockEvents.splice(0, mockEvents.length, ...newEvents);
-        return HttpResponse.json(newEvents, { status: 200 });
+      if (index !== -1) {
+        mockEvents[index] = { ...mockEvents[index], ...updatedEvent };
+        return HttpResponse.json(mockEvents[index]);
       }
 
       return new HttpResponse(null, { status: 404 });
@@ -185,51 +144,20 @@ export const setupMockHandlerRepeatUpdating = () => {
   );
 };
 
-export const setupMockHandlerRepeatDeletion = () => {
-  const mockEvents: Event[] = [
-    {
-      id: '1',
-      title: '삭제될 반복 이벤트 1',
-      date: '2025-10-16',
-      startTime: '10:30',
-      endTime: '11:00',
-      description: '삭제될 매일 스탠드업',
-      location: '온라인',
-      category: '업무',
-      repeat: {
-        type: 'daily',
-        interval: 1,
-        endDate: '2025-11-30',
-      },
-      notificationTime: 5,
-    },
-    {
-      id: '2',
-      title: '삭제될 반복 이벤트 2',
-      date: '2025-10-22',
-      startTime: '14:00',
-      endTime: '15:00',
-      description: '삭제될 주간 회의',
-      location: '회의실 B',
-      category: '업무',
-      repeat: {
-        type: 'weekly',
-        interval: 1,
-        endDate: '2025-12-31',
-      },
-      notificationTime: 10,
-    },
-  ];
+export const setupMockHandlerRepeatDeletion = (initEvents = [] as Event[]) => {
+  const mockEvents: Event[] = [...initEvents];
 
   server.use(
     http.get('/api/events', () => {
       return HttpResponse.json({ events: mockEvents });
     }),
-    http.delete('/api/events-list', async ({ request }) => {
-      const { eventIds } = (await request.json()) as { eventIds: string[] };
-      const remainingEvents = mockEvents.filter((event) => !eventIds.includes(event.id));
+    http.delete('/api/events/:id', ({ params }) => {
+      const { id } = params;
+      const index = mockEvents.findIndex((event) => event.id === id);
 
-      mockEvents.splice(0, mockEvents.length, ...remainingEvents);
+      if (index !== -1) {
+        mockEvents.splice(index, 1);
+      }
 
       return new HttpResponse(null, { status: 204 });
     })
